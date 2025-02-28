@@ -1,7 +1,6 @@
 /****************************************************************************
  *
- * Copyright 2017 Proyectos y Sistemas de Mantenimiento SL (eProsima).
- *           2018 PX4 Pro Development Team. All rights reserved.
+ * Copyright 2019 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,52 +31,46 @@
  ****************************************************************************/
 
 /**
- * @brief Sensor Combined uORB topic listener example
- * @file sensor_combined_listener.cpp
+ * @brief Vehicle GPS position uORB topic listener example
+ * @file vehicle_global_position_listener.cpp
  * @addtogroup examples
  * @author Nuno Marques <nuno.marques@dronesolutions.io>
- * @author Vicente Monge
  */
 
- #include <rclcpp/rclcpp.hpp>
- #include <px4_msgs/msg/vehicle_local_position.hpp>
- 
- /**
-  * @brief Sensor Combined uORB topic data callback
-  */
- class LocalPositionListener : public rclcpp::Node
- {
- public:
-	 explicit LocalPositionListener() : Node("vehicle_local_position_listener")
-	 {
-		 rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-		 auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
-		 
-		 subscription_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>("/fmu/out/vehicle_local_position", qos,
-		 [this](const px4_msgs::msg::VehicleLocalPosition::UniquePtr msg) {
-			 std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-			 std::cout << "RECEIVED SENSOR COMBINED DATA"   << std::endl;
-			 std::cout << "============================="   << std::endl;
-			 std::cout << "x  =" << msg->x << std::endl;
-			 std::cout << "y  =" << msg->y << std::endl;
-			 std::cout << "z  =" << msg->z << std::endl;
+#include <rclcpp/rclcpp.hpp>
+#include <px4_msgs/msg/hover_thrust_estimate.hpp>
 
-		 });
-	 }
- 
- private:
-	 rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr subscription_;
- 
- };
- 
- int main(int argc, char *argv[])
- {
-	 std::cout << "Starting vehicle_local_posiotion listener node..." << std::endl;
-	 setvbuf(stdout, NULL, _IONBF, BUFSIZ);
-	 rclcpp::init(argc, argv);
-	 rclcpp::spin(std::make_shared<LocalPositionListener>());
- 
-	 rclcpp::shutdown();
-	 return 0;
- }
- 
+/**
+ * @brief Vehicle GPS position uORB topic data callback
+ */
+class VehicleGpsPositionListener : public rclcpp::Node
+{
+public:
+    explicit VehicleGpsPositionListener() : Node("vehicle_global_position_listener")
+    {
+        rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+        auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+        
+        subscription_ = this->create_subscription<px4_msgs::msg::HoverThrustEstimate>("/fmu/out/hover_thrust_estimate", qos,
+        [this](const px4_msgs::msg::HoverThrustEstimate::UniquePtr msg) {
+            
+            std::cout << "Hover_thrust = "  << msg->hover_thrust << std::endl;
+
+
+        });
+    }
+
+private:
+    rclcpp::Subscription<px4_msgs::msg::HoverThrustEstimate>::SharedPtr subscription_;
+};
+
+int main(int argc, char *argv[])
+{
+    std::cout << "Starting vehicle_global_position listener node..." << std::endl;
+    setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<VehicleGpsPositionListener>());
+
+    rclcpp::shutdown();
+    return 0;
+}
