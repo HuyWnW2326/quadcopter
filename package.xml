@@ -4,12 +4,14 @@
   <name>quadcopter</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="huy@todo.todo">huy</maintainer>
+  <maintainer email="doanngocminhhuy2003@gmail.com">huy</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  
   <depend>rclcpp</depend>
+  <depend>rclpy</depend>
   <depend>px4_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
