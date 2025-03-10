@@ -96,6 +96,7 @@ public:
             Roll_current = atan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y)) ;
             Pitch_current = asin(std::clamp(2.0 * (w * y - z * x), -1.0, 1.0));
             Yaw_current = atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) ;
+            
         });
 
         input_rc_subscription_ = this->create_subscription<px4_msgs::msg::InputRc>("/fmu/out/input_rc", qos,
@@ -110,48 +111,87 @@ public:
                 Rc_CH7 = msg->values[6];
                 Rc_CH8 = msg->values[7];
 
-                // std::cout << "Rc_CH6  =" << Rc_CH6 << std::endl;
-                
-
-
-                if((Rc_CH6 > 1500) && (state_offboard == 0))
+                if(Rc_CH6 > 1500)
                 {
-                    this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
-                    state_offboard = 1;
                     x_d = x_current;
                     y_d = y_current;
                     z_d = z_current;
-                    Yaw_d = Yaw_current - M_PI/2;
-                    std::cout << "Offboard_mode  =" << std::endl;
-                    std::cout << "Yaw_d          =" << Yaw_d << std::endl;
+                    // Yaw_d =  0.0;
                 }
+                
+                // if((Rc_CH6 > 1500) && (state_offboard == 0))
+                // {
+                //     state_offboard = 1;
+                //     x_d = x_current;
+                //     y_d = y_current;
+                //     z_d = z_current;
                     
-                else if((Rc_CH6 < 1500) && (state_offboard == 1)) 
-                {
-                    this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 3);
-                    state_offboard = 0;
-                    std::cout << "Position_mode  =" << std::endl;
-                } 
+                //     // std::cout << "Offboard_mode  =" << std::endl;
+                //     // std::cout << "Yaw_d          =" << Yaw_d << std::endl;
+                // }
+                    
+                // else if((Rc_CH6 < 1500) && (state_offboard == 1)) 
+                // {
+                //     // this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 3);
+                //     state_offboard = 0;
+                //     // std::cout << "Position_mode  =" << std::endl;
+                // } 
             });
 
         auto timer_callback = [this]() -> void {
 
-            timer_count ++;
             if(timer_count >= 50)
             {
                 timer_count = 0;
-                std::cout << "x  =" << x_current << std::endl;
-                std::cout << "y  =" << y_current << std::endl;
-                std::cout << "z  =" << z_current << std::endl;
-                std::cout << "Yaw_current         =" << Yaw_current << std::endl;
+                // std::cout << "x  =" << x_current << std::endl;
+                // std::cout << "y  =" << y_current << std::endl;
+                // std::cout << "z  =" << z_current << std::endl;
+                // std::cout << "Roll_current      =" << Roll_current << std::endl;
+                // std::cout << "Pitch_current     =" << Pitch_current << std::endl;
+                std::cout << "Yaw_current       =" << Yaw_current << std::endl;
             }
 
             if(Rc_CH6 > 1500)
             {
+                this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
                 publish_offboard_control_mode();
                 Controller_z(z_d);
                 Controller_xy(x_d, y_d);
             }
+
+            // else if(Rc_CH6 < 1500)
+            // {
+            //     this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
+            // }
+
+            // if(timer == 5)
+            // {
+            //     timer = 0;
+            //     std::cout << "x  =" << x_current << std::endl;
+            //     std::cout << "y  =" << y_current << std::endl;
+            //     std::cout << "z  =" << z_current << std::endl;
+            //     std::cout << "Roll_current      =" << Roll_current << std::endl;
+            //     std::cout << "Pitch_current     =" << Pitch_current << std::endl;
+            //     std::cout << "Yaw_current       =" << Yaw_current << std::endl;
+            // }
+
+            // if(timer_count == 10)
+            // {
+            //     this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
+            //     this->arm();
+            // }
+            
+            // publish_offboard_control_mode();
+            // publish_trajectory_setpoint();
+            
+            // Controller_z(z_d);
+            
+            // if (timer_count < 11) {
+			// 	timer_count++;
+			// }
+
+            timer_count ++;
+            timer++;
         };
         timer_ = this->create_wall_timer(10ms, timer_callback);
 
@@ -180,6 +220,7 @@ private:
     std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
 
     uint64_t timer_count = 0;
+    uint64_t timer = 0;
 
     float fz = 0.0;     
     float g = 9.8;
@@ -189,9 +230,9 @@ private:
     const double f_max = 4 * b * pow(omg_max,2); 
 
     float x_d = 0.0;
-    float y_d = 0.0;
+    float y_d = 5.0;
     float z_d = -5.0;
-    float Yaw_d = M_PI/2;
+    float Yaw_hover = 0.0;
 
     float x_current = 0.0;
     float y_current = 0.0;
@@ -270,7 +311,7 @@ void OffboardControl::publish_trajectory_setpoint()
 {
     TrajectorySetpoint msg{};
     msg.position = {0.0, 0.0, -5.0};
-    msg.yaw = M_PI; // [-PI:PI]
+    msg.yaw = M_PI/2; // [-PI:PI]
     msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
     trajectory_setpoint_publisher_->publish(msg);
 }
@@ -354,7 +395,8 @@ void OffboardControl::Controller_xy(float DesiredValueX, float DesiredValueY)
     float Roll_d = 0.0;
     float Pitch_d = 0.0;
     float Yaw_d = 0.0;
-
+    
+    
     ux1 = PID_inner(PID_outter(DesiredValueX, x_current, 1.875), vx_current, 4.8);
     uy1 = PID_inner(PID_outter(DesiredValueY, y_current, 1.875), vy_current, 4.8);
 
@@ -375,7 +417,8 @@ void OffboardControl::Controller_xy(float DesiredValueX, float DesiredValueY)
     if(Pitch_d < -M_PI/6)     Pitch_d = -M_PI/6;
     else if(Pitch_d > M_PI/6) Pitch_d = M_PI/6;
 
-    RPY_to_Quaternion(Pitch_d, -Roll_d, M_PI/2);
+    // RPY_to_Quaternion(Pitch_d, -Roll_d, 0.0);
+    RPY_to_Quaternion(0.0, 0.0, 0.0);
 }
 
 void OffboardControl::RPY_to_Quaternion(float Roll, float Pitch, float Yaw)
