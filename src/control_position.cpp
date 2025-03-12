@@ -132,7 +132,7 @@ private:
 
     std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
 
-    uint64_t timer = 0;
+    uint64_t timer_count = 0;
 
     float fz = 0.0;     
     float g = 9.8;
@@ -285,7 +285,7 @@ void OffboardControl::Controller_xy(float DesiredValueX, float DesiredValueY)
     float uy1 = 0.0;
     float Roll_d = 0.0;
     float Pitch_d = 0.0;
-    float Yaw_d = Yaw_hover;
+    float Yaw_d = Yaw_current - M_PI/2;
     
     ux1 = PID_inner(PID_outter(DesiredValueX, x_current, 1.875), vx_current, 4.8);
     uy1 = PID_inner(PID_outter(DesiredValueY, y_current, 1.875), vy_current, 4.8);
@@ -308,7 +308,6 @@ void OffboardControl::Controller_xy(float DesiredValueX, float DesiredValueY)
     else if(Pitch_d > M_PI/6) Pitch_d = M_PI/6;
 
     RPY_to_Quaternion(Pitch_d, -Roll_d, Yaw_hover + M_PI/2);
-    // RPY_to_Quaternion(0.0, 0.0, 0.0);
 }
 
 void OffboardControl::RPY_to_Quaternion(float Roll, float Pitch, float Yaw)
