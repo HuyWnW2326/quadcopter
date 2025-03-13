@@ -5,6 +5,7 @@
 #include <px4_msgs/msg/vehicle_attitude_setpoint.hpp>
 
 #include <px4_msgs/msg/vehicle_local_position.hpp>
+#include <px4_msgs/msg/vehicle_global_position.hpp>
 #include <px4_msgs/msg/vehicle_attitude.hpp>
 #include <px4_msgs/msg/input_rc.hpp>
 
@@ -31,7 +32,7 @@ public:
         vehicle_attitude_setpoint_publisher_= this->create_publisher<VehicleAttitudeSetpoint>("/fmu/in/vehicle_attitude_setpoint", 10);
 
         rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-        auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+        auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 10), qos_profile);
         
         vehicle_local_position_subscription_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>("/fmu/out/vehicle_local_position", qos,
         [this](const px4_msgs::msg::VehicleLocalPosition::UniquePtr msg) {
@@ -43,6 +44,15 @@ public:
 
             z_current  = msg->z;
             vz_current = msg->vz;
+        });     
+        
+        vehicle_global_position_subscription_ = this->create_subscription<px4_msgs::msg::VehicleGlobalPosition>("/fmu/out/vehicle_global_position", qos,
+        [this](const px4_msgs::msg::VehicleGlobalPosition::UniquePtr msg) {
+
+            lon = msg->lon;
+            lat = msg->lat;
+            alt = msg->lon;
+           
         });     
 
         vehicle_attitude_subscription_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>("/fmu/out/vehicle_attitude", qos,
@@ -60,25 +70,29 @@ public:
         });
 
         input_rc_subscription_ = this->create_subscription<px4_msgs::msg::InputRc>("/fmu/out/input_rc", qos,
-            [this](const px4_msgs::msg::InputRc::UniquePtr msg) {
+        [this](const px4_msgs::msg::InputRc::UniquePtr msg) {
 
-                Rc_CH6 = msg->values[5];
+            Rc_CH6 = msg->values[5];
 
-            });
+        });
 
         auto timer_callback = [this]() -> void {
 
             if(timer_count >= 50)
             {
                 timer_count = 0;
-                std::cout << "Yaw_current  =" << Yaw_current << std::endl;
-                std::cout << "x_current    =" << x_current   << std::endl;
-                std::cout << "y_current    =" << y_current   << std::endl;
-                std::cout << "z_current    =" << z_current   << std::endl;
+                // std::cout << "Yaw_current  =" << Yaw_current << std::endl;
+                // std::cout << "x_current    =" << x_current   << std::endl;
+                // std::cout << "y_current    =" << y_current   << std::endl;
+                // std::cout << "z_current    =" << z_current   << std::endl;
+                // std::cout << "lon   =" << lon << std::endl;
+                // std::cout << "lat   =" << lat << std::endl;
+                // std::cout << "alt   =" << alt << std::endl;
             }
 
             if((Rc_CH6 >= 1500) && (state_offboard == 0))
             {
+                
                 this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
                 state_offboard = 1;
                 x_d = x_current;
@@ -86,7 +100,7 @@ public:
                 z_d = z_current;
                 Yaw_hover =  Yaw_current - M_PI/2;
                 
-                // std::cout << "Offboard_mode  =" << std::endl;
+                std::cout << "Offboard_mode  =" << std::endl;
                 // std::cout << "Yaw_d          =" << Yaw_d << std::endl;
             }
                 
@@ -94,16 +108,14 @@ public:
             {
                 this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 3);
                 state_offboard = 0;
-                // std::cout << "Position_mode  =" << std::endl;
+                std::cout << "Position_mode  =" << std::endl;
             }
-
+            publish_offboard_control_mode();
             if(state_offboard == 1)
             {
-                publish_offboard_control_mode();
                 Controller_z(z_d);
                 Controller_xy(x_d, y_d);
             }
-
             timer_count ++;
         };
         timer_ = this->create_wall_timer(10ms, timer_callback);
@@ -127,6 +139,7 @@ private:
     rclcpp::Publisher<VehicleAttitudeSetpoint>::SharedPtr vehicle_attitude_setpoint_publisher_;
 
     rclcpp::Subscription<VehicleLocalPosition>::SharedPtr vehicle_local_position_subscription_;
+    rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr vehicle_global_position_subscription_;
     rclcpp::Subscription<VehicleAttitude>::SharedPtr vehicle_attitude_subscription_;
     rclcpp::Subscription<InputRc>::SharedPtr input_rc_subscription_;
 
@@ -134,12 +147,17 @@ private:
 
     uint64_t timer_count = 0;
 
+    // Parameter of Quadcopter
     float fz = 0.0;     
     float g = 9.8;
     float m = 1.545;
     float b = 4.6 * pow(10,-6);
     float omg_max = 1100;
     const double f_max = 4 * b * pow(omg_max,2); 
+
+    float lon = 0.0;
+    float lat = 5.0;
+    float alt = 0.0;
 
     float x_d = 0.0;
     float y_d = 5.0;
@@ -325,6 +343,11 @@ void OffboardControl::RPY_to_Quaternion(float Roll, float Pitch, float Yaw)
     quaternion[3] = cr * cp * sy - sr * sp * cy;
 }
 
+// void OffboardControl::OAA_to_xyz(float lon_desired, float lat_desired, float alt_desired)
+// {
+
+// }
+    
 int main(int argc, char *argv[])
 {
     std::cout << "Starting offboard control node..." << std::endl;
