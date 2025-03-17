@@ -82,9 +82,13 @@ public:
             {
                 timer_count = 0;
                 // std::cout << "Yaw_current  =" << Yaw_current << std::endl;
-                // std::cout << "x_current    =" << x_current   << std::endl;
-                // std::cout << "y_current    =" << y_current   << std::endl;
-                // std::cout << "z_current    =" << z_current   << std::endl;
+                std::cout << "x_current    =" << x_current   << std::endl;
+                std::cout << "y_current    =" << y_current   << std::endl;
+                std::cout << "z_current    =" << z_current   << std::endl;
+
+                std::cout << "x_d          =" << x_d   << std::endl;
+                std::cout << "y_d          =" << y_d   << std::endl;
+                std::cout << "z_d          =" << z_d   << std::endl << std::endl;
                 // std::cout << "lon   =" << lon << std::endl;
                 // std::cout << "lat   =" << lat << std::endl;
                 // std::cout << "alt   =" << alt << std::endl;
@@ -92,12 +96,13 @@ public:
 
             if((Rc_CH6 >= 1500) && (state_offboard == 0))
             {
-                
-                this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
+                // this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
                 state_offboard = 1;
-                x_d = x_current;
-                y_d = y_current;
-                z_d = z_current;
+                xyz_setpoint(2.0, 0.0, 0.0);
+                // x_d = x_current;
+                // y_d = y_current;
+                // z_d = z_current;
+
                 Yaw_hover =  Yaw_current - M_PI/2;
                 
                 std::cout << "Offboard_mode  =" << std::endl;
@@ -106,11 +111,14 @@ public:
                 
             else if((Rc_CH6 <= 1500) && (state_offboard == 1)) 
             {
-                this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 3);
+                // this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 3);
                 state_offboard = 0;
                 std::cout << "Position_mode  =" << std::endl;
             }
+
             publish_offboard_control_mode();
+            // publish_trajectory_setpoint();
+
             if(state_offboard == 1)
             {
                 Controller_z(z_d);
@@ -129,6 +137,7 @@ public:
     void RPY_to_Quaternion(float Roll, float Pitch, float Yaw);
     void Controller_z(float DesiredValue);
     void Controller_xy(float DesiredValueX, float DesiredValueY);
+    void xyz_setpoint(float x_desired, float y_desired, float z_desired);
 
 private:
     rclcpp::TimerBase::SharedPtr timer_;
@@ -225,7 +234,7 @@ void OffboardControl::publish_offboard_control_mode()
 void OffboardControl::publish_trajectory_setpoint()
 {
     TrajectorySetpoint msg{};
-    msg.position = {0.0, 0.0, -5.0};
+    msg.position = {5.0, -5.0, -5.0};
     msg.yaw = M_PI/2; // [-PI:PI]
     msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
     trajectory_setpoint_publisher_->publish(msg);
@@ -343,10 +352,12 @@ void OffboardControl::RPY_to_Quaternion(float Roll, float Pitch, float Yaw)
     quaternion[3] = cr * cp * sy - sr * sp * cy;
 }
 
-// void OffboardControl::OAA_to_xyz(float lon_desired, float lat_desired, float alt_desired)
-// {
-
-// }
+void OffboardControl::xyz_setpoint(float x_desired, float y_desired, float z_desired)
+{
+    x_d = x_current + x_desired;
+    y_d = y_current + y_desired;
+    z_d = z_current + z_desired;
+}
     
 int main(int argc, char *argv[])
 {
