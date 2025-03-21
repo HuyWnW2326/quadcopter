@@ -26,7 +26,6 @@ class OffboardControl : public rclcpp::Node
 public:
     OffboardControl() : Node("offboard_control")
     {
-        
         offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>("/fmu/in/offboard_control_mode", 10);
         trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>("/fmu/in/trajectory_setpoint", 10);
         vehicle_command_publisher_ = this->create_publisher<VehicleCommand>("/fmu/in/vehicle_command", 10);
@@ -49,16 +48,13 @@ public:
         
         vehicle_global_position_subscription_ = this->create_subscription<px4_msgs::msg::VehicleGlobalPosition>("/fmu/out/vehicle_global_position", qos,
         [this](const px4_msgs::msg::VehicleGlobalPosition::UniquePtr msg) {
-
             lon_current = msg->lon;
             lat_current = msg->lat;
             alt_current = msg->lon;
-           
         });     
 
         vehicle_attitude_subscription_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>("/fmu/out/vehicle_attitude", qos,
         [this](const px4_msgs::msg::VehicleAttitude::UniquePtr msg) {
-
             double w = msg->q[0];
             double x = msg->q[1];
             double y = msg->q[2];
@@ -67,23 +63,19 @@ public:
             Roll_current = atan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y)) ;
             Pitch_current = asin(std::clamp(2.0 * (w * y - z * x), -1.0, 1.0));
             Yaw_current = atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) ;
-            
         });
 
         input_rc_subscription_ = this->create_subscription<px4_msgs::msg::InputRc>("/fmu/out/input_rc", qos,
         [this](const px4_msgs::msg::InputRc::UniquePtr msg) {
-
             Rc_CH6 = msg->values[5];
-
         });
 
         distance_sensor_subscription_ = this->create_subscription<px4_msgs::msg::DistanceSensor>("/fmu/out/distance_sensor", qos,
         [this](const px4_msgs::msg::DistanceSensor::UniquePtr msg) {
-            z_current = -(msg->current_distance);
+            z_current = -(msg->current_distance)*cos(sqrt(Roll_current))*cos(sqrt(Pitch_current));
         });
 
         auto timer_callback = [this]() -> void {
-
             if(timer_count >= 50)
             {
                 timer_count = 0;
@@ -114,7 +106,7 @@ public:
             }
 
             publish_offboard_control_mode();
-
+            
             if(state_offboard == 1)
             {
                 Controller_z(z_d);
