@@ -5,9 +5,14 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
+        # Node(
+        #     package='quadcopter',
+        #     executable='control_position_node',
+        #     output='screen'
+        # ),
         Node(
             package='quadcopter',
-            executable='control_position_node',
+            executable='test_lidar',
             output='screen'
         ),
         Node(

@@ -105,6 +105,8 @@ public:
         timer_ = this->create_wall_timer(10ms, timer_callback);
     }
 
+    void arm();
+	void disarm();
     float PID_inner(float DesiredValue, float CurrentValue, float Kp);
     float PID_outter(float DesiredValue, float CurrentValue, float Kp);
     void RPY_to_Quaternion(float Roll, float Pitch, float Yaw);
@@ -127,6 +129,8 @@ private:
 
     std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
     uint64_t timer_count = 0;
+    uint64_t offboard_setpoint_counter_;   //!< counter for the number of setpoints sent
+
 
     // Parameter of Quadcopter
     float fz = 0.0;     
@@ -169,6 +173,20 @@ private:
     void publish_vehicle_attitude_setpoint(float thrust_z);
 };
 
+void OffboardControl::arm()
+{
+	publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0);
+
+	RCLCPP_INFO(this->get_logger(), "Arm command send");
+}
+
+void OffboardControl::disarm()
+{
+	publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 0.0);
+
+	RCLCPP_INFO(this->get_logger(), "Disarm command send");
+}
+
 void OffboardControl::publish_offboard_control_mode()
 {
     OffboardControlMode msg{};
@@ -185,8 +203,8 @@ void OffboardControl::publish_offboard_control_mode()
 void OffboardControl::publish_trajectory_setpoint()
 {
     TrajectorySetpoint msg{};
-    // msg.position = {5.0, -5.0, -5.0};
-    // msg.yaw = M_PI/2; // [-PI:PI]
+    msg.position = {0.0, 0.0, -1.5};
+    msg.yaw = 0.0; // [-PI:PI]
     msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
     trajectory_setpoint_publisher_->publish(msg);
 }
