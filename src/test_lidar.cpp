@@ -261,9 +261,6 @@ float OffboardControl::PID_inner(float DesiredValue, float CurrentValue, float K
 
     err = DesiredValue - CurrentValue;
 
-    if(err > 1.0) err = 1.0;
-    else if (err < -1.0)  err = -1.0;
-
     PID = Kp * err;
     return PID;
 }
@@ -276,9 +273,6 @@ float OffboardControl::PID_outter(float DesiredValue, float CurrentValue, float 
     err = DesiredValue - CurrentValue;
     // if(err > 0.5) err = 0.5;
     // else if (err < -0.5)  err = -0.5;
-
-    if(err > 1.0) err = 1.0;
-    else if (err < -1.0)  err = -1.0;
 
     PID = Kp * err;
     return PID;
