@@ -42,7 +42,7 @@ public:
             y_current  = msg->y;
             vy_current = msg->vy;
             
-            z_current  = msg->z;
+            // z_current  = msg->z;
             vz_current = msg->vz;
         });     
         
@@ -70,10 +70,10 @@ public:
             Rc_CH6 = msg->values[5];
         });
 
-        // distance_sensor_subscription_ = this->create_subscription<px4_msgs::msg::DistanceSensor>("/fmu/out/distance_sensor", qos,
-        // [this](const px4_msgs::msg::DistanceSensor::UniquePtr msg) {
-        //     z_current = -(msg->current_distance)*cos(sqrt(Roll_current))*cos(sqrt(Pitch_current));
-        // });
+        distance_sensor_subscription_ = this->create_subscription<px4_msgs::msg::DistanceSensor>("/fmu/out/distance_sensor", qos,
+        [this](const px4_msgs::msg::DistanceSensor::UniquePtr msg) {
+            z_current = -(msg->current_distance)*cos(Roll_current)*cos(Pitch_current);
+        });
 
         auto timer_callback = [this]() -> void {
             if(timer_count >= 50)
@@ -88,11 +88,7 @@ public:
             {
                 // this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
                 state_offboard = 1;
-                xyz_setpoint(0.0, 0.0, -2.0);
-                // x_d = x_current;
-                // y_d = y_current;
-                // z_d = z_current;
-
+                xyz_setpoint(0.0, 0.0, 0.0);
                 Yaw_hover =  Yaw_current - M_PI/2;
                 
                 std::cout << "Offboard_mode  " << std::endl;
@@ -220,7 +216,6 @@ void OffboardControl::publish_offboard_control_mode()
 	offboard_control_mode_publisher_->publish(msg);
 }
 
-
 void OffboardControl::publish_trajectory_setpoint()
 {
     TrajectorySetpoint msg{};
@@ -265,6 +260,10 @@ float OffboardControl::PID_inner(float DesiredValue, float CurrentValue, float K
     float PID;
 
     err = DesiredValue - CurrentValue;
+
+    if(err > 1.0) err = 1.0;
+    else if (err < -1.0)  err = -1.0;
+
     PID = Kp * err;
     return PID;
 }
